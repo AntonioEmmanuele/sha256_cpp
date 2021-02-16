@@ -212,22 +212,12 @@ namespace sec{
     for (index=0;index<64;index++){
       /*Calculating stuff..*/
        s0 = (rightRotate(chunk_hash[0],2)) ^ (rightRotate(chunk_hash[0],13)) ^(rightRotate(chunk_hash[0],22));
+       ch = (chunk_hash[4] &chunk_hash[5]) ^ (~(chunk_hash[4]) & (chunk_hash[6]));
+       s1 = (rightRotate(chunk_hash[4],6)) ^ (rightRotate(chunk_hash[4],11)) ^ (rightRotate(chunk_hash[4],25));
        maj= (chunk_hash[0]&chunk_hash[1]) ^ (chunk_hash[0]&chunk_hash[2]) ^ (chunk_hash[1]&chunk_hash[2]);
        t2 = s0 + maj;
-       s1 = (rightRotate(chunk_hash[4],6)) ^ (rightRotate(chunk_hash[4],11)) ^ (rightRotate(chunk_hash[4],25));
-       ch = (chunk_hash[4] &chunk_hash[5]) ^ ((!chunk_hash[4]) & chunk_hash[6]);
        t1= chunk_hash[7] + s1 + ch + sha256_round_constants[index] + _64_32bitword[index];
        /*Updating 64 hashes*/
-       /*
-       chunk_hash[0]=t1+t2;
-       chunk_hash[1]=chunk_hash[0];
-       chunk_hash[2]=chunk_hash[1];
-       chunk_hash[3]=chunk_hash[2];
-       chunk_hash[4]=chunk_hash[3]+t1;
-       chunk_hash[5]=chunk_hash[4];
-       chunk_hash[6]=chunk_hash[5];
-       chunk_hash[7]=chunk_hash[6];
-       */
        chunk_hash[7]=chunk_hash[6];
        chunk_hash[6]=chunk_hash[5];
        chunk_hash[5]=chunk_hash[4];
@@ -250,11 +240,11 @@ namespace sec{
     memset(chunks,0x00,sizeof(uint32_t)*64);
     memcpy(chunk_hash,sha256_hash_values,sizeof(uint32_t)*8);
     messageSchedule(filled_value,chunks);
-    //compress(chunks,chunk_digest);
+    compress(chunks,chunk_hash);
     updateDigest(chunk_hash);
     #if SHA256_DBG
       for(unsigned int i=0;i<8;i++)
-        printf("%x i",digest[i]);
+        printf("%x",digest[i]);
       printf("\n");
     #endif
   }
