@@ -17,6 +17,10 @@ using namespace std;
   5-
 */
 
+#define rightRotate(to_rot,bits) (((to_rot) >> (bits)) | ((to_rot) << ((sizeof(to_rot))*8-(bits))))
+
+#define leftRotate(to_rot,bits) (((to_rot) << (bits)) | ((to_rot) >> ((sizeof(to_rot))*8-(bits))))
+
 /* The namespace of security things..*/
 namespace sec{
   /*Hash values are the first 32 bits of the fractional part of the square roots of  the first 8 prime numbers*/
@@ -52,21 +56,26 @@ namespace sec{
     uint64_t original_value_len;
     uint64_t filled_len;
     uint8_t *filled_value;
+    uint32_t digest[8];
     /*Some utility functions*/
     void init_originals(const uint8_t *const , const uint64_t);
     void append_one(uint8_t**,uint64_t&);
     uint64_t obtain_filled_len(uint64_t);
     void fill(void);
+    void init_digest();
+    void messageSchedule(uint8_t *,uint32_t*);
+    void compress(uint32_t*,uint32_t*);
+    void updateDigest(uint32_t*);
   public:
     /* Constructor*/
      sha256(const uint8_t *const , const uint64_t );
      sha256(const sha256&);
-     uint64_t getOriginal(uint8_t*);
+     uint64_t getOriginal(uint8_t**);
      uint64_t getOriginalLen(void);
+     void calcDigest(void);
      /*Destructor*/
      ~sha256();
      /*Operations*/
-     void messageSchedule(uint32_t*);
   };
 
 };
