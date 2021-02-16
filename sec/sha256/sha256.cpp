@@ -8,6 +8,7 @@ namespace sec{
   sha256::sha256(const uint8_t* const  string,const uint64_t len)
   {
     init_originals(string,len);
+    fill();
   }
   /*
       @brief: return the lenght of the original string
@@ -44,6 +45,7 @@ namespace sec{
   sha256::~sha256()
   {
     delete[]original_value;
+    //delete[]filled_value;
   }
   /*
     @brief:Inits original string and original len
@@ -61,9 +63,9 @@ namespace sec{
     original_value_len=len;
     original_value=new uint8_t[original_value_len];
     memcpy(original_value,string,len);
-    #if DBG
-    cout<<"[SHA256_DBG] Len passed "<<len<< endl;
-    cout<<"[SHA256_DBG]Len of string "<<strlen((char*)original_value)+1<<endl;
+    #if SHA256_DBG
+    cout<<"[SHA256 Len passed ] "<<len<< endl;
+    cout<<"[SHA256 Len of string] "<<strlen((char*)original_value)+1<<endl;
     for(uint64_t i=0;i<len;i++)
       cout<< original_value[i];
     cout<<endl;
@@ -80,37 +82,77 @@ namespace sec{
               division=len/512.
               multiply_value=ceil of division-to_mul
               number of byte to add=512+len
-      @ret: number of byte of the filled string.
+      @in : len -> This is the number of bits of the string(not bytes)
+      @ret: number of bytes of the filled string.
   */
   uint64_t sha256::obtain_filled_len(uint64_t len)
   {
-    double div=len/512;
+    double div=(double)len/512;
     double exc=ceil(div);
     double to_mul=exc-div;
     uint64_t to_add=512*to_mul;
-    return len+original_len;
+    return (to_add+len)/8;
   }
   /*
     @brief: Append one to the original string
     @output: original string appended to one (big endian) and output string len
   */
-  void sha256::append_one(uint8_t*output_string,uint8_t& output_len)
+  void sha256::append_one(uint8_t**output_string,uint64_t& output_len)
   {
-      output_len=original_len+1;
-      if(output_string!=NULL)
-        delete[]output_string;
-      output_string=new uint8_t[output_len];
-      memcpy(output_string,original_value,original_len);
+      uint8_t *ptr;
+      output_len=original_value_len+1;
+      *output_string=new uint8_t[output_len];
+      ptr=*output_string;
+      memcpy(*output_string,original_value,original_value_len);
       /*Original len is output-1*/
-      output_string[original_len]=0b10000000;
+      ptr[original_value_len]=0b10000000;
+      #if SHA256_DBG
+      cout <<" [SHA256 Step1 Appended ]\n"<< endl;
+      for(uint8_t i=0;i<output_len;i++)
+      {
+        printf( "%x ,",ptr[i]);
+      }
+      printf("\n \n");
+    #endif
   }
+  /*
+      @brief: Create the filled_value appending one, filling the string with 0
+  */
   void sha256::fill(void)
   {
-      uint8_t*appended_one=NULL;
-      uint8_t appended_one_len=0;
-      append_one(appended_one,appended_one_len);
-      filled_len=obtain_filled_len(appended_one_len);
+      uint8_t* appended_one;
+      uint64_t appended_one_len=0;
+      uint64_t index=0;
+      uint8_t index_btm=0;
+      uint8_t btm_rev=7;
+      append_one(&appended_one,appended_one_len);
+      /*
+        Should pass the number of bits+ bitlen of the original string (64 bits value)
+      */
+      filled_len=obtain_filled_len((appended_one_len*8+64));
       filled_value=new uint8_t [filled_len];
-      
+      memcpy(filled_value,appended_one,appended_one_len);
+      delete[]appended_one;
+      /*Start from the last value and insert all 0*/
+      for(  index = appended_one_len ; index<  filled_len ; index++)
+        filled_value[index]=0;
+      /*Inserting the len of the original value*/
+      for( index  = filled_len - 8 ; index< ( filled_len ); index++)
+      {
+          filled_value[index]=((original_value_len)&(0xFF00000000000000>>(8*index_btm)))>>btm_rev*8;
+          index_btm++;
+          btm_rev--;
+      }
+      #if SHA256_DBG
+      printf("[SHA256 Step1 Filled ]\n");
+      for(uint8_t i=0;i<filled_len;i++)
+      {
+        printf( "%x ,",filled_value[i]);
+        if(i%8==0 && i!=0)
+          printf ("\n");
+      }
+      printf("\n");
+    #endif
   }
+
 };
