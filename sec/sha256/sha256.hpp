@@ -12,7 +12,7 @@ using namespace std;
   Algorithm:
   1- Obtain the string
   2- Append a one (0b10000000)
-  3- Make this number divible with 512 bits (consider original string len+1 byte+8 byte(64 bit rappresenting the original len))
+  3- Make this number divible with 448 bits
   4- For every chunk of 512 bits:
       Initialize hash_values for the chunk, basically a copy of the sha256_hash_values sha256_constant
       create 64 elements array of 32 bits(The first 16 elements are the 512bits chunks and the others are created from the first 16)-> messageSchedule
@@ -34,7 +34,6 @@ using namespace std;
       compress                                                              generated hash value for the chunk                                      |
                                                                                 |                                                                   |
       update digest                                                         digest udate(chunk digest+ global digest) -------------------------------
-
 */
 
 #define rightRotate(to_rot,bits) (((to_rot) >> (bits)) | ((to_rot) << ((sizeof(to_rot))*8-(bits))))
@@ -80,7 +79,7 @@ namespace sec{
     /*********************************************************************************************************************
       API: Function written in lower camel case.
             Pay attention to get functions.
-            In getOriginal and getFilled the function uses dynamic allocation.
+            In getOriginal the function uses dynamic allocation.
             You can delete this values using delArrayUtil.
             For getDigest static allocation is used.
             To allocate correctly these arrays use the constants sha256_digestchar_dim and sha256_digestuint32_dim
@@ -93,17 +92,12 @@ namespace sec{
     uint8_t *original_value;
     /*original string value len*/
     uint64_t original_value_len;
-    /*filled string value_len*/
-    uint64_t filled_len;
-    /*filled string value*/
-    uint8_t *filled_value;
     /*digest*/
     uint32_t digest[8];
     /*Some utility functions*/
     void init_originals(const uint8_t *const , const uint64_t);
-    void append_one(uint8_t**,uint64_t&);
     uint64_t obtain_filled_len(uint64_t);
-    void fill(void);
+    void preprocess(uint8_t* &,uint64_t&);
     void init_digest();
     void messageSchedule(uint8_t *,uint32_t*);
     void compress(uint32_t*,uint32_t*);
@@ -114,8 +108,6 @@ namespace sec{
     sha256(const sha256&);
     uint64_t getOriginal(uint8_t**);
     uint64_t getOriginalLen(void);
-    uint64_t getFilled(uint8_t**);
-    uint64_t getFilledLen(void);
     void calcDigest(void);
     ssize_t getDigest(uint32_t*);
     ssize_t getDigest( char*);

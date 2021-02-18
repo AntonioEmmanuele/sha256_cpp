@@ -19,7 +19,6 @@ namespace sec{
   sha256::sha256(const uint8_t* const  string,const uint64_t len)
   {
     init_originals(string,len);
-    fill();
     init_digest();
   }
   /*
@@ -43,28 +42,6 @@ namespace sec{
     *to_cpy=new uint8_t[original_value_len];
     memcpy(*to_cpy,this->original_value,getOriginalLen());
     return getOriginalLen();
-  }
-  /*
-      @brief: return the lenght of the filled string
-      @ret: original_value_len
-  */
-  uint64_t sha256::getFilledLen(void)
-  {
-    return filled_len;
-  }
-  /*
-      @brief: obtain the filled  string
-      @out : pointer to the copyed string
-      @ret : lenght of the string
-      @add info: after using you should delete the string
-  */
-  uint64_t sha256::getFilled(uint8_t** to_cpy)
-  {
-    if (*to_cpy!=0)
-      delete[]*to_cpy;
-    *to_cpy=new uint8_t[filled_len];
-    memcpy(*to_cpy,this->filled_value,getFilledLen());
-    return getFilledLen();
   }
   /*
       @brief: obtain the digest
@@ -113,7 +90,6 @@ namespace sec{
   sha256::~sha256()
   {
     delete[]original_value;
-    delete[]filled_value;
   }
   /*
     @brief:Inits original string and original len
@@ -131,80 +107,50 @@ namespace sec{
     original_value_len=len;
     original_value=new uint8_t[original_value_len];
     memcpy(original_value,string,len);
-    #if SHA256_DBG
-    cout<<"[SHA256 Len passed ] "<<len<< endl;
-    cout<<"[SHA256 Len of string] "<<strlen((char*)original_value)+1<<endl;
-    for(uint64_t i=0;i<len;i++)
-      cout<< original_value[i];
-    cout<<endl;
-    #endif
   }
   /*
-      @brief: This function returns the number of elements in the filled array.
+      @brief: This function returns the number of elements of the filled array.
               In sha256 we need to work with a string of byte composed by a number of bytes that is integer multiple
-              of the string.
+              of 512.
               So we need to append to the original string the value of one and then add  zeroes
               (in a big endian way) to obtain an integer multiple.
-              the len of the string in 64 bits.
               To obtain a general case we have:
-                division=len/512.
-                multiply_value=ceil of division-to_mul
-                number of byte to add=512+len
+                division=len/448.
+                to_mul=ceil of division-to_mul
+                number of byte to add=448*to_mul
+                total bit value= to add+string len(originalvalue+1)+64 bits*exc
       @in : len -> This is the number of bits of the string(not bytes)
       @ret: number of bytes of the filled string.
   */
   uint64_t sha256::obtain_filled_len(uint64_t len)
   {
-    double div=(double)len/512;
+    double div=(double)len/448;
     double exc=ceil(div);
     double to_mul=exc-div;
-    uint64_t to_add=512*to_mul;
-    return (to_add+len)/8;
+    printf("Difference to add %f \n", to_mul);
+    uint64_t to_add = 448*to_mul;
+    printf("Bits to add %llu \n", to_add);
+    return ((to_add+len+(64*exc))/8);
   }
   /*
-    @brief: Append one to the original string
-    @output: original string appended to one (big endian) and output string len
-  */
-  void sha256::append_one(uint8_t**output_string,uint64_t& output_len)
-  {
-      uint8_t *ptr;
-      output_len=original_value_len+1;
-      *output_string=new uint8_t[output_len];
-      ptr=*output_string;
-      memcpy(*output_string,original_value,original_value_len);
-      /*Original len is output-1*/
-      ptr[original_value_len]=0b10000000;
-      #if SHA256_DBG
-      cout <<" [SHA256 Step1 Appended ]\n"<< endl;
-      for(uint8_t i=0;i<output_len;i++)
-      {
-        printf( "%x ",ptr[i]);
-      }
-      printf("\n \n");
-    #endif
-  }
-  /*
-      @brief: Create the filled_value appending one and then filling the string with 0 (in case len(string appended+ 64 bits)%512!=0 )
+      @brief: append 1 bit to the array and then make it congruent with 448, append 0 bits making it integer divisible for 512,then add the dimension of the array.
       @pre: filled_value uninitialized
       @post:filled value initialized
   */
-  void sha256::fill(void)
+  void sha256::preprocess(uint8_t* &filled_value,uint64_t& filled_len)
   {
-      uint8_t* appended_one;
-      uint64_t appended_one_len=0;
       uint64_t index=0;
       uint8_t index_btm=0;
       uint8_t btm_rev=7;
-      append_one(&appended_one,appended_one_len);
       /*
         Should pass the number of bits+ bitlen of the original string (64 bits value)
       */
-      filled_len=obtain_filled_len((appended_one_len*8+64));
-      filled_value=new uint8_t [filled_len];
-      memcpy(filled_value,appended_one,appended_one_len);
-      delete[]appended_one;
+      filled_len=obtain_filled_len((original_value_len*8+1));
+      filled_value = new uint8_t [filled_len];
+      memcpy(filled_value,original_value,original_value_len);
+      filled_value[original_value_len] = 0b10000000;
       /*Start from the last value and insert all 0*/
-      for(  index = appended_one_len ; index<  filled_len ; index++)
+      for(  index = original_value_len+1 ; index<  filled_len ; index++)
         filled_value[index]=0;
       /*Inserting the len of the original value,remember that original value is in bytes...*/
       for( index  = filled_len - 8 ; index< ( filled_len ); index++)
@@ -213,8 +159,8 @@ namespace sec{
           index_btm++;
           btm_rev--;
       }
-      #if SHA256_DBG
-      printf("[SHA256 Step1 Filled ]\n");
+    #if SHA256_DBG
+     printf("[SHA256 Step1 Filled ]\n");
       for(uint8_t i=0;i<filled_len;i++)
       {
         printf( "%x ",filled_value[i]);
@@ -223,6 +169,7 @@ namespace sec{
       }
       printf("\n");
     #endif
+
   }
   /*
     @brief:Inits the digest value with the hash values(first 32 bits of the fractional part of the square root of the first 8
@@ -232,10 +179,6 @@ namespace sec{
   void sha256::init_digest(void)
   {
     memcpy(digest,sha256_hash_values,32);
-    #if SHA256_DBG
-      for(uint8_t i=0;i<8;i++)
-        printf("[SHA256 Digest init ] %u %x \n",i,digest[i]);
-    #endif
   }
   /*
       @brief: in message schedule step the filled value,after being divided in chunks of 512 bits (512/8 elements of the filled array)
@@ -307,24 +250,31 @@ namespace sec{
     uint32_t chunk_hash[8];
     uint64_t index=0;
     memset(chunks,0x00,sizeof(uint32_t)*64);
-    /* For every chunk of 512 bits (64 bytes or 64 elements of the filled array )
+    uint8_t *processed_string=nullptr;
+    uint64_t processed_string_len=0;
+    preprocess(processed_string,processed_string_len);
+    /*
+     For every chunk of 512 bits (64 bytes or 64 elements of the filled array )
        1-initialize hash for the values for the chunk
        2-generate the 32 *64 bits word
        3-update hash value for the chunk
        4-update digest value
     */
-    for(index=0;index<filled_len;index=index+64)
+
+    for(index=0;index<processed_string_len;index=index+64)
     {
-      memcpy(chunk_hash,sha256_hash_values,sizeof(uint32_t)*8);
-      messageSchedule(filled_value,chunks);
-      compress(chunks,chunk_hash);
-      updateDigest(chunk_hash);
+        memcpy(chunk_hash,sha256_hash_values,sizeof(uint32_t)*8);
+        messageSchedule(&processed_string[index],chunks);
+        compress(chunks,chunk_hash);
+        updateDigest(chunk_hash);
+      #if SHA256_DBG
+        printf("Updated digest in step %llu \n",index);
+        for(unsigned int i=0;i<8;i++)
+            printf("%x",digest[i]);
+        printf("\n");
+        #endif
     }
-    #if SHA256_DBG
-      for(unsigned int i=0;i<8;i++)
-        printf("%x",digest[i]);
-      printf("\n");
-    #endif
+    delete[]processed_string;
   }
   /*
       @brief:getFilled and getOriginal allocates an array, this function deletes the allocated array
