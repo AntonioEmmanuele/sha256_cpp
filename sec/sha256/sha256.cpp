@@ -1,11 +1,23 @@
 #include "sha256.hpp"
-/*
-    @helper function used in the messageSchedule to generate the first 16 elements of the new array
-*/
-static uint32_t __from8to32(uint8_t*base_ptr){
-    return ((uint32_t)base_ptr[0]<<24)|((uint32_t)base_ptr[1]<<16)|((uint32_t)base_ptr[2]<<8)|((uint32_t)base_ptr[3]);
-}
 namespace sec{
+  /*
+      @helper function used in the messageSchedule to generate the first 16 elements of the new array
+  */
+  static inline uint32_t __from8to32(uint8_t*base_ptr){
+      return ((uint32_t)base_ptr[0]<<24)|((uint32_t)base_ptr[1]<<16)|((uint32_t)base_ptr[2]<<8)|((uint32_t)base_ptr[3]);
+  }
+  /*
+      @helper function used getDigest(char*)
+  */
+  static inline void __from32to8(uint8_t*base_ptr,uint32_t val){
+      base_ptr[0]=    ( ( (val) >> 24 ) & (0xFF) );
+      base_ptr[1]=    ( ( (val) & (0x00FF0000) ) >> 16 );
+      base_ptr[2]=    ( ( (val) & (0x0000FF00) ) >> 8 );
+      base_ptr[3]=    ( ( (val) & (0x000000FF) )  );
+      #if SHA256_DBG
+        printf("Base %x \n ",base_ptr[0]);
+      #endif
+  }
   /*
     @brief: Default Constructor
     @input: string to copy, lenght of the string
@@ -32,9 +44,62 @@ namespace sec{
   */
   uint64_t sha256::getOriginal(uint8_t** to_cpy)
   {
+    if (*to_cpy!=0)
+      delete[]*to_cpy;
     *to_cpy=new uint8_t[original_value_len];
     memcpy(*to_cpy,this->original_value,getOriginalLen());
     return getOriginalLen();
+  }
+  /*
+      @brief: return the lenght of the filled string
+      @ret: original_value_len
+  */
+  uint64_t sha256::getFilledLen(void)
+  {
+    return filled_len;
+  }
+  /*
+      @brief: obtain the filled  string
+      @out : pointer to the copyed string
+      @ret : lenght of the string
+      @add info: after using you should delete the string
+  */
+  uint64_t sha256::getFilled(uint8_t** to_cpy)
+  {
+    if (*to_cpy!=0)
+      delete[]*to_cpy;
+    *to_cpy=new uint8_t[filled_len];
+    memcpy(*to_cpy,this->filled_value,getFilledLen());
+    return getFilledLen();
+  }
+  /*
+      @brief: obtain the digest
+      @out : pointer to the copyed string
+      @ret : lenght of the string
+      @add info: This function doesn't use dinamic allocation because you actually know the number of elements in the digest array(8)
+  */
+  ssize_t  sha256::getDigest(uint32_t* to_cpy)
+  {
+    if(to_cpy==NULL)
+      return -1;
+    memcpy(to_cpy,this->digest,sha256_digestuint32_dim*sizeof(uint32_t));
+    return sha256_digestuint32_dim;
+  }
+  /*
+      @brief: obtain the digest as a string (array of char )
+      @out : pointer to the copyed string
+      @ret : lenght of the string
+      @add info: Same as previously, return 32
+  */
+  ssize_t sha256::getDigest( char*to_cpy){
+    if(to_cpy==NULL)
+      return -1;
+    /*Number of bytes in the string, one char is one byte (4 byte(32 bits)*8)*/
+    uint8_t* ptr=(uint8_t*)to_cpy;
+    uint8_t index=0;
+    for(index=0;index<sha256_digestchar_dim/4;index++)
+      __from32to8(&ptr[index*4],this->digest[index]);
+    return sha256_digestchar_dim;
   }
   /*
     @brief: copy constructor
@@ -80,15 +145,15 @@ namespace sec{
   }
   /*
       @brief: This function returns the number of elements in the filled array.
-              In sha256 we need to work with a string of byte composed by a number of byte that is integer multiple
+              In sha256 we need to work with a string of byte composed by a number of bytes that is integer multiple
               of the string.
               So we need to append to the original string the value of one and then add  zeroes
               (in a big endian way) to obtain an integer multiple.
               the len of the string in 64 bits.
               To obtain a general case we have:
-              division=len/512.
-              multiply_value=ceil of division-to_mul
-              number of byte to add=512+len
+                division=len/512.
+                multiply_value=ceil of division-to_mul
+                number of byte to add=512+len
       @in : len -> This is the number of bits of the string(not bytes)
       @ret: number of bytes of the filled string.
   */
@@ -123,7 +188,9 @@ namespace sec{
     #endif
   }
   /*
-      @brief: Create the filled_value appending one, filling the string with 0
+      @brief: Create the filled_value appending one and then filling the string with 0 (in case len(string appended+ 64 bits)%512!=0 )
+      @pre: filled_value uninitialized
+      @post:filled value initialized
   */
   void sha256::fill(void)
   {
@@ -234,18 +301,42 @@ namespace sec{
     for(index=0;index<8;index++)
       digest[index]+=chunk_hash[index];
   }
+  /*
+      @brief: All in one function that calculates the digest value.
+      @pre : Filled initialized
+      @post : digest obtained
+  */
   void sha256::calcDigest(void){
     uint32_t chunks[64];
     uint32_t chunk_hash[8];
+    uint64_t index=0;
     memset(chunks,0x00,sizeof(uint32_t)*64);
-    memcpy(chunk_hash,sha256_hash_values,sizeof(uint32_t)*8);
-    messageSchedule(filled_value,chunks);
-    compress(chunks,chunk_hash);
-    updateDigest(chunk_hash);
+    /* For every chunk of 512 bits (64 bytes or 64 elements of the filled array )
+       1-initialize hash for the values for the chunk
+       2-generate the 32 *64 bits word
+       3-update hash value for the chunk
+       4-update digest value
+    */
+    for(index=0;index<filled_len;index=index+64)
+    {
+      memcpy(chunk_hash,sha256_hash_values,sizeof(uint32_t)*8);
+      messageSchedule(filled_value,chunks);
+      compress(chunks,chunk_hash);
+      updateDigest(chunk_hash);
+    }
     #if SHA256_DBG
       for(unsigned int i=0;i<8;i++)
         printf("%x",digest[i]);
       printf("\n");
     #endif
+  }
+  /*
+      @brief:getFilled and getOriginal allocates an array, this function deletes the allocated array
+      @pre: The array should be previously allocated
+      @in/out: the array prev. allocated (used with getFilled or getOriginal)
+  */
+  void sha256::delArrayUtil(uint8_t**array){
+    delete[]*array;
+    *array=NULL;
   }
 };

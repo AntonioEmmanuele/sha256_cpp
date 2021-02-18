@@ -1,20 +1,40 @@
 #ifndef SHA_256_HPP
 #define SHA_256_HPP
 #include "math.h"
+#include <cstring>
+#include <iostream>
 /* Debug flg*/
 #define SHA256_DBG 1
 #if SHA256_DBG
-#include <iostream>
 using namespace std;
 #endif
-
 /*
   Algorithm:
   1- Obtain the string
   2- Append a one (0b10000000)
   3- Make this number divible with 512 bits (consider original string len+1 byte+8 byte(64 bit rappresenting the original len))
-  4-Init hash values and round constants.
-  5-
+  4- For every chunk of 512 bits:
+      Initialize hash_values for the chunk, basically a copy of the sha256_hash_values sha256_constant
+      create 64 elements array of 32 bits(The first 16 elements are the 512bits chunks and the others are created from the first 16)-> messageSchedule
+      Do compression -> compression updates the hash_values of the specific chunk(of 512 bits)
+      Update the global hash_values of the object
+  In pseudo code
+    obtain string                                                           input
+                                                                                |
+    append one                                                              input.append(0b10000000)
+                                                                                |
+    make the string                                                             |
+    divisible with 512                                                      input filled with 0 in case len in bits input.append(0b10000000) + 64 bits (the len of the original message in bits)
+                                                                                |
+    for each 512 bits chunk:                                                chunk of 512 bits <-----------------------------------------------------|
+      init a temporary hash_values for the chunk                                |                                                                   |
+                                                                                |                                                                   |
+      messageSchedule                                                       Generating a 32*64 word                                                 | While number of 512 bits chunks >0
+                                                                                |                                                                   |
+      compress                                                              generated hash value for the chunk                                      |
+                                                                                |                                                                   |
+      update digest                                                         digest udate(chunk digest+ global digest) -------------------------------
+
 */
 
 #define rightRotate(to_rot,bits) (((to_rot) >> (bits)) | ((to_rot) << ((sizeof(to_rot))*8-(bits))))
@@ -23,6 +43,12 @@ using namespace std;
 
 /* The namespace of security things..*/
 namespace sec{
+
+  /****************************/
+  /*USED TO ALLOCATE THE RESULT IN AN ARRAY OF CHAR OR AN ARRAY OF UINT32*/
+  const uint8_t  sha256_digestuint32_dim = 8;
+  const uint8_t sha256_digestchar_dim = 32;
+  /***************************/
   /*Hash values are the first 32 bits of the fractional part of the square roots of  the first 8 prime numbers*/
   const uint32_t sha256_hash_values[8]=
   {
@@ -68,14 +94,18 @@ namespace sec{
     void updateDigest(uint32_t*);
   public:
     /* Constructor*/
-     sha256(const uint8_t *const , const uint64_t );
-     sha256(const sha256&);
-     uint64_t getOriginal(uint8_t**);
-     uint64_t getOriginalLen(void);
-     void calcDigest(void);
-     /*Destructor*/
-     ~sha256();
-     /*Operations*/
+    sha256(const uint8_t *const , const uint64_t );
+    sha256(const sha256&);
+    uint64_t getOriginal(uint8_t**);
+    uint64_t getOriginalLen(void);
+    uint64_t getFilled(uint8_t**);
+    uint64_t getFilledLen(void);
+    void calcDigest(void);
+    ssize_t getDigest(uint32_t*);
+    ssize_t getDigest( char*);
+    void delArrayUtil(uint8_t**);
+    /*Destructor*/
+    ~sha256();
   };
 
 };
