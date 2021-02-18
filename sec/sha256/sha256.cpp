@@ -7,16 +7,10 @@ namespace sec{
       return ((uint32_t)base_ptr[0]<<24)|((uint32_t)base_ptr[1]<<16)|((uint32_t)base_ptr[2]<<8)|((uint32_t)base_ptr[3]);
   }
   /*
-      @helper function used getDigest(char*)
+      @helper function used in the getDigit to generate the string
   */
-  static inline void __from32to8(uint8_t*base_ptr,uint32_t val){
-      base_ptr[0]=    ( ( (val) >> 24 ) & (0xFF) );
-      base_ptr[1]=    ( ( (val) & (0x00FF0000) ) >> 16 );
-      base_ptr[2]=    ( ( (val) & (0x0000FF00) ) >> 8 );
-      base_ptr[3]=    ( ( (val) & (0x000000FF) )  );
-      #if SHA256_DBG
-        printf("Base %x \n ",base_ptr[0]);
-      #endif
+  static inline void __from32tochar(char*buff,uint32_t v){
+      sprintf(buff,"%x",v);
   }
   /*
     @brief: Default Constructor
@@ -91,14 +85,16 @@ namespace sec{
       @ret : lenght of the string
       @add info: Same as previously, return 32
   */
-  ssize_t sha256::getDigest( char*to_cpy){
-    if(to_cpy==NULL)
-      return -1;
-    /*Number of bytes in the string, one char is one byte (4 byte(32 bits)*8)*/
-    uint8_t* ptr=(uint8_t*)to_cpy;
+  ssize_t sha256::getDigest( char*to_cpy)
+  {
     uint8_t index=0;
-    for(index=0;index<sha256_digestchar_dim/4;index++)
-      __from32to8(&ptr[index*4],this->digest[index]);
+    if(to_cpy==NULL){
+      return -1;
+    }
+    for(index=0;index<sha256_digestuint32_dim;index++)
+    {
+      __from32tochar(&to_cpy[index*8],this->digest[index]);
+    }
     return sha256_digestchar_dim;
   }
   /*

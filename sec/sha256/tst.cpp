@@ -12,15 +12,12 @@ int main(void){
   sec::sha256 Key((uint8_t*)to_pass,(strlen(to_pass)));
   Key.calcDigest();
   ret=Key.getDigest(digest_value);
-  ret=Key.getDigest(digest_value_char);
+  ret=Key.getDigest((char*)digest_value_char);
   cout<<ret<< endl;
   cout << "Value in uint32 : "<<endl;
   for(uint8_t i=0 ; i< d_len1;i++)
     printf("%x",digest_value[i]);
   cout<<endl;
-  cout<<"String value "<<endl;
-  for(uint8_t i=0;i<d_len2;i++)
-    printf("Idx %u  Character %c Hex: %x \n ",i,digest_value_char[i],digest_value_char[i]);
-  cout<<endl;
+  printf("String value %s,strlen %ld \n",digest_value_char,strlen(digest_value_char));
   return 0;
 }

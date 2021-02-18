@@ -47,7 +47,8 @@ namespace sec{
   /****************************/
   /*USED TO ALLOCATE THE RESULT IN AN ARRAY OF CHAR OR AN ARRAY OF UINT32*/
   const uint8_t  sha256_digestuint32_dim = 8;
-  const uint8_t sha256_digestchar_dim = 32;
+  /* 8bytes for uint32_t*8 + string term*/
+  const uint8_t sha256_digestchar_dim = 65;
   /***************************/
   /*Hash values are the first 32 bits of the fractional part of the square roots of  the first 8 prime numbers*/
   const uint32_t sha256_hash_values[8]=
@@ -76,12 +77,27 @@ namespace sec{
 
   /* Class sha256*/
   class sha256{
+    /*********************************************************************************************************************
+      API: Function written in lower camel case.
+            Pay attention to get functions.
+            In getOriginal and getFilled the function uses dynamic allocation.
+            You can delete this values using delArrayUtil.
+            For getDigest static allocation is used.
+            To allocate correctly these arrays use the constants sha256_digestchar_dim and sha256_digestuint32_dim
+            i.e.:
+              uint32_t digest_array[sec::sha256_digestuint32_dim]
+              char digest [sec::sha256_digestchar_dim]
+    **********************************************************************************************************************/
   private:
     /* Original string value*/
     uint8_t *original_value;
+    /*original string value len*/
     uint64_t original_value_len;
+    /*filled string value_len*/
     uint64_t filled_len;
+    /*filled string value*/
     uint8_t *filled_value;
+    /*digest*/
     uint32_t digest[8];
     /*Some utility functions*/
     void init_originals(const uint8_t *const , const uint64_t);
@@ -107,8 +123,5 @@ namespace sec{
     /*Destructor*/
     ~sha256();
   };
-
 };
-
-
 #endif
