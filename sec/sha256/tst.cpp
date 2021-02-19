@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 int main(void){
-  char to_pass[]="helloworldhelloworldhelloworldhelloworldhelloworld";
+  char to_pass[]="helloworldhelloworldhelloworldhelloworldhelloworldhelloworld";
   ssize_t ret=0;
   const uint8_t d_len1=sec::sha256_digestuint32_dim;
   const uint8_t d_len2=sec::sha256_digestchar_dim;

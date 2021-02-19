@@ -4,7 +4,7 @@
 #include <cstring>
 #include <iostream>
 /* Debug flg*/
-#define SHA256_DBG 1
+#define SHA256_DBG 0
 #if SHA256_DBG
 using namespace std;
 #endif

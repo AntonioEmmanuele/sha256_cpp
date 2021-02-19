@@ -169,7 +169,6 @@ namespace sec{
       }
       printf("\n");
     #endif
-
   }
   /*
     @brief:Inits the digest value with the hash values(first 32 bits of the fractional part of the square root of the first 8
@@ -215,6 +214,8 @@ namespace sec{
 
   void sha256::compress(uint32_t* _64_32bitword,uint32_t*chunk_hash){
     uint32_t index,s0,s1,maj,t1,t2,ch=0;
+    printf("Calculating stuff ....\n");
+    printf("******************************* \n");
     for (index=0;index<64;index++){
       /*Calculating stuff..*/
        s0 = (rightRotate(chunk_hash[0],2)) ^ (rightRotate(chunk_hash[0],13)) ^(rightRotate(chunk_hash[0],22));
@@ -236,9 +237,14 @@ namespace sec{
      }
   }
   void sha256::updateDigest(uint32_t*chunk_hash){
+    printf("Chunks \n");
     uint8_t index=0;
     for(index=0;index<8;index++)
+    {
+      printf("%x",chunk_hash[index]);
       digest[index]+=chunk_hash[index];
+    }
+    printf("\n");
   }
   /*
       @brief: All in one function that calculates the digest value.
@@ -263,7 +269,8 @@ namespace sec{
 
     for(index=0;index<processed_string_len;index=index+64)
     {
-        memcpy(chunk_hash,sha256_hash_values,sizeof(uint32_t)*8);
+      /*Must initialize it with the current value of digest*/
+        memcpy(chunk_hash,digest,sizeof(uint32_t)*8);
         messageSchedule(&processed_string[index],chunks);
         compress(chunks,chunk_hash);
         updateDigest(chunk_hash);
