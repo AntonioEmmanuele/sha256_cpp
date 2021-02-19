@@ -127,9 +127,7 @@ namespace sec{
     double div=(double)len/448;
     double exc=ceil(div);
     double to_mul=exc-div;
-    printf("Difference to add %f \n", to_mul);
     uint64_t to_add = 448*to_mul;
-    printf("Bits to add %llu \n", to_add);
     return ((to_add+len+(64*exc))/8);
   }
   /*
@@ -159,16 +157,6 @@ namespace sec{
           index_btm++;
           btm_rev--;
       }
-    #if SHA256_DBG
-     printf("[SHA256 Step1 Filled ]\n");
-      for(uint8_t i=0;i<filled_len;i++)
-      {
-        printf( "%x ",filled_value[i]);
-        if((i+1)%8==0 && i!=0)
-          printf ("\n");
-      }
-      printf("\n");
-    #endif
   }
   /*
     @brief:Inits the digest value with the hash values(first 32 bits of the fractional part of the square root of the first 8
@@ -201,21 +189,10 @@ namespace sec{
       s1 = rightRotate(new_32_64bitword_ptr[index-2],17)^(rightRotate(new_32_64bitword_ptr[index-2] ,19) )^(new_32_64bitword_ptr[index-2] >> 10);
       new_32_64bitword_ptr[index] = s1 + new_32_64bitword_ptr[index-7] + s0 + new_32_64bitword_ptr[index-16];
     }
-    #if SHA256_DBG
-      printf("[SHA256 MESSAGE_SCHEDULE NEW WORDS ] \n");
-      for(index=0;index<64;index++){
-        printf(" %x ",new_32_64bitword_ptr[index]);
-        if((index+1)%2==0&&index !=0)
-          printf(" \n");
-      }
-      printf("\n");
-    #endif
   }
 
   void sha256::compress(uint32_t* _64_32bitword,uint32_t*chunk_hash){
     uint32_t index,s0,s1,maj,t1,t2,ch=0;
-    printf("Calculating stuff ....\n");
-    printf("******************************* \n");
     for (index=0;index<64;index++){
       /*Calculating stuff..*/
        s0 = (rightRotate(chunk_hash[0],2)) ^ (rightRotate(chunk_hash[0],13)) ^(rightRotate(chunk_hash[0],22));
@@ -237,14 +214,9 @@ namespace sec{
      }
   }
   void sha256::updateDigest(uint32_t*chunk_hash){
-    printf("Chunks \n");
     uint8_t index=0;
     for(index=0;index<8;index++)
-    {
-      printf("%x",chunk_hash[index]);
       digest[index]+=chunk_hash[index];
-    }
-    printf("\n");
   }
   /*
       @brief: All in one function that calculates the digest value.
@@ -274,12 +246,6 @@ namespace sec{
         messageSchedule(&processed_string[index],chunks);
         compress(chunks,chunk_hash);
         updateDigest(chunk_hash);
-      #if SHA256_DBG
-        printf("Updated digest in step %llu \n",index);
-        for(unsigned int i=0;i<8;i++)
-            printf("%x",digest[i]);
-        printf("\n");
-        #endif
     }
     delete[]processed_string;
   }
