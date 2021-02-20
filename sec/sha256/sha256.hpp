@@ -3,8 +3,12 @@
 #include "math.h"
 #include <cstring>
 #include <iostream>
+#include <array>
+#include <algorithm>
 /* Debug flg*/
 #define SHA256_DBG 0
+/*Static flg, in this mode the algoritm will work with a static mode never using dynamic alloc*/
+#define SHA256_STATIC 0
 #if SHA256_DBG
 using namespace std;
 #endif
@@ -77,7 +81,31 @@ namespace sec{
   /* Class sha256*/
   class sha256{
     /*********************************************************************************************************************
-      API: Function written in lower camel case.
+    This implementation can use dynamic allocation or not.
+    SHA256_STATIC for use static.
+
+    Dynamic functions:
+      1-init_originals
+      2-preprocess
+      3-getOriginal
+      4-getOriginalLen
+      5-delArrayUtil
+      6-calcDigest
+      7-constructor with args
+
+    Common Functions:
+      1-Destructor
+      2,3-getDigest
+      4-messageSchedule
+      5-compress
+      6-updateDigest
+      7-doCalc
+      8-resetDigest
+    Static Functions:
+      1-update
+      2- costructor without args
+
+      API Dynamic : Function written in lower camel case.
             Pay attention to get functions.
             In getOriginal the function uses dynamic allocation.
             You can delete this values using delArrayUtil.
@@ -88,30 +116,44 @@ namespace sec{
               char digest [sec::sha256_digestchar_dim]
     **********************************************************************************************************************/
   private:
+#if !SHA256_STATIC
     /* Original string value*/
     uint8_t *original_value;
     /*original string value len*/
     uint64_t original_value_len;
+#endif
     /*digest*/
     uint32_t digest[8];
     /*Some utility functions*/
+#if !SHA256_STATIC
     void init_originals(const uint8_t *const , const uint64_t);
-    uint64_t obtain_filled_len(uint64_t);
     void preprocess(uint8_t* &,uint64_t&);
-    void init_digest();
+#elif SHA256_STATIC
+    void initBlock512(void);
+#endif
+    void init_digest(void);
+    uint64_t obtain_filled_len(uint64_t);
     void messageSchedule(uint8_t *,uint32_t*);
     void compress(uint32_t*,uint32_t*);
+    void doCalc(uint8_t*,uint64_t );
     void updateDigest(uint32_t*);
+
   public:
-    /* Constructor*/
+    /* Copy Constructor*/
+    sha256( const sha256&);
+#if !SHA256_STATIC
     sha256(const uint8_t *const , const uint64_t );
-    sha256(const sha256&);
     uint64_t getOriginal(uint8_t**);
     uint64_t getOriginalLen(void);
+    void delArrayUtil(uint8_t**);
     void calcDigest(void);
+#elif SHA256_STATIC
+      sha256(void);
+      void update(uint8_t *,uint64_t );
+#endif
     ssize_t getDigest(uint32_t*);
     ssize_t getDigest( char*);
-    void delArrayUtil(uint8_t**);
+    void resetDigest(void);
     /*Destructor*/
     ~sha256();
   };
