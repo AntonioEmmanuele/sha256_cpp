@@ -30,7 +30,6 @@ namespace sec{
         base_ptr[index]=((dimension)&(0xFF00000000000000>>(8*index_btm)))>>btm_rev*8;
         index_btm++;
         btm_rev--;
-        printf("\nInserted value %x in %llu \n ",base_ptr[index],index);
     }
   }
   /*
@@ -45,13 +44,10 @@ namespace sec{
       */
       /*number of bits +1 */
       uint32_t to_resize=ceil(((float)(bit_dim)+1+64)/512);
-      std::cout<<"Factor "<<to_resize<<std::endl<< "Bit dim "<<bit_dim<<std::endl;
       /* resizing, the result of the operation will be a multiple of 512*/
       processed_len=to_resize*512;
-        std::cout<<"To resize in bit "<<processed_len<<std::endl;
       /* Converting in byte*/
       processed_len=processed_len/8;
-      std::cout<<"To reside "<<processed_len<<std::endl;
       to_process = new uint8_t [processed_len];
       memcpy(to_process,original_value,bit_dim/8);
       /* Append one, fill with 0(eventually),insert the dimension*/
@@ -217,15 +213,6 @@ namespace sec{
     uint8_t *processed_string=nullptr;
     uint64_t processed_string_len=0;
     preprocess(processed_string,processed_string_len,to_calc,to_calc_len*8);
-    std::cout<<"Processed string"<<processed_string_len<<std::endl;
-    for(uint64_t i=0;i<processed_string_len;i++)
-    {
-      //std::cout<<"  "<<std::hex<<processed_string[i];
-      printf("%x ",processed_string[i]);
-      if(i%8==0&&i!=0)
-        std::cout<<std::endl;
-    }
-    std::cout<<std::endl;
     doCalc(processed_string,processed_string_len);
     delete[]processed_string;
     processed_string=nullptr;
