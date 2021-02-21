@@ -7,7 +7,7 @@ namespace sec{
       return ((uint32_t)base_ptr[0]<<24)|((uint32_t)base_ptr[1]<<16)|((uint32_t)base_ptr[2]<<8)|((uint32_t)base_ptr[3]);
   }
   /*
-      @helper function used in the getDigit to generate the string
+      @helper function used in the getDigest to generate the string
   */
   static inline void __from32tochar(char*buff,uint32_t v){
       sprintf(buff,"%08x",v);
@@ -18,8 +18,9 @@ namespace sec{
     @out: processed string
   */
   static void append_fill_insdim(uint8_t*base_ptr,uint64_t original_value_len,uint64_t max_dim,uint64_t dimension){
-    uint64_t index_btm,index=0;
-    uint64_t btm_rev=7;
+    uint64_t index=0;
+    uint8_t btm_rev=7;
+    uint8_t index_btm=0;
     base_ptr[original_value_len] = 0b10000000;
     /*Start from the last value and insert all 0*/
     for(  index = original_value_len+1 ; index<  max_dim ; index++)
@@ -49,7 +50,7 @@ namespace sec{
       /* Converting in byte*/
       processed_len=processed_len/8;
       to_process = new uint8_t [processed_len];
-      memcpy(to_process,original_value,bit_dim/8);
+      memcpy(to_process,original_value,(size_t)(bit_dim/8));
       /* Append one, fill with 0(eventually),insert the dimension*/
       append_fill_insdim(to_process,bit_dim/8,processed_len,bit_dim);
   }
@@ -92,6 +93,18 @@ namespace sec{
     return sha256_digestchar_dim;
   }
   /*
+      @brief: obtain the digest as a string (not array of char)
+      @out : pointer to the copyed string
+      @ret : lenght of the string
+      @add info: Same as previously, return 32
+  */
+  void sha256::getDigest(std::string&to_cpy)
+  {
+    char array[sha256_digestchar_dim];
+    getDigest(array);
+    to_cpy=array;
+  }
+  /*
     @brief: copy constructor
   */
 
@@ -107,7 +120,7 @@ namespace sec{
   /*
     @brief:Inits the digest value with the hash values(first 32 bits of the fractional part of the square root of the first 8
             prime numbers)
-    @post:digit value initialized
+    @post:digest value initialized
   */
   void sha256::init_digest(void)
   {
@@ -191,7 +204,7 @@ namespace sec{
     for(index=0;index<processed_string_len;index=index+64)
     {
       /*Must initialize it with the current value of digest*/
-        memcpy(chunk_hash,digest,sizeof(uint32_t)*8);
+        memcpy(chunk_hash,digest,32);
         messageSchedule(&processed_string[index],chunks);
         compress(chunks,chunk_hash);
         updateDigest(chunk_hash);
@@ -217,4 +230,62 @@ namespace sec{
     delete[]processed_string;
     processed_string=nullptr;
   }
+  /*
+    @brief:Perform a conversion using static allocation.
+           The input is divided in blocks of 512 bits, every block is elaborated and then it is threated the case of the
+           last block (or the first in case the input<512).
+           This "special case "means that we must check if his dimension+64bits+1 is congruent, else make it congruent using
+           an helper array of 128 bytes.
+    @in : input string, string len.
+    @post:digest updated
+  */
+  void sha256::updateS(uint8_t*to_calc,uint64_t to_calc_len)
+{
+    /*Helper string*/
+    uint8_t helper[128];
+    uint64_t helper_len,num_blocks,index=0;
+    /* if it is just one block then process like this , if it is the maximum len will be 128 bytes(128)*/
+    if(to_calc_len<=64)
+    {
+        helper_len=ceil(((float)(to_calc_len*8)+1+64)/512);
+        /*Helper len*512/8*/
+        helper_len=helper_len*64;
+        /*copying*/
+        memcpy(helper,to_calc,to_calc_len);
+        /*Elaborating*/
+        append_fill_insdim(helper,to_calc_len,helper_len,(to_calc_len*8));
+        /*Calculating*/
+        doCalc(helper,helper_len);
+    }
+    /* If it is more than one block or one*/
+    else
+    {
+      /*Obtaining the number of blocks*/
+      num_blocks=ceil(((float)(to_calc_len*8)+1+64)/512);
+      /*Calculate until the last block*/
+      doCalc(to_calc,((num_blocks-1)*64));
+      /*
+        For the last block then repeat the op of the first
+        We need to check if the last 512 bit block is congruent with 512.
+        This is basically doing again the case of a block <512 bits.
+        Resize factors:
+        ( ( num_blocks - 1 )*64 (Start point of to calc)-> like to_calc[0] for the previous case
+        (( to_calc_len )-( ( num_blocks - 1 )*64)) -> number of bytes in the last block.
+
+      */
+      /*Calculating the dimension of the last block*/
+      helper_len=ceil( ( (float)(num_blocks)*512-(float)(to_calc_len)*8 ) /512 );
+      helper_len=helper_len*64;
+      /*
+        copying
+        to_calc_len*8-(num_blocks-1)*64 is the position of the last element.
+      */
+      memcpy(helper,&to_calc[ ( ( num_blocks - 1 )*64 )],(( to_calc_len )-( ( num_blocks - 1 )*64)));
+      /*Elaborating*/
+      append_fill_insdim(helper,(( to_calc_len )-( ( num_blocks - 1 )*64)),helper_len,(to_calc_len*8));
+      /*Calculating*/
+      doCalc(helper,helper_len);
+    }
+
+}
 };
