@@ -3,11 +3,6 @@
 #include "math.h"
 #include <cstring>
 #include <iostream>
-#include <iomanip>
-/* Debug flg*/
-#define SHA256_DBG 0
-/*Static flg, in this mode the algoritm will work with a static mode never using dynamic alloc*/
-#define SHA256_STATIC 0
 /*
   Algorithm:
   1- Obtain the string
@@ -77,6 +72,16 @@ namespace sec{
   /* Class sha256*/
   class sha256{
     /*********************************************************************************************************************
+      INFO:
+        Private functions are utilities that realizes the algorithm.
+        You can obtain digest in three ways:
+        1-As an array of uint32_t (c array actually)
+        2-as a char*
+        3-as a c++ string
+        You can reset the digest to repeat calculation.
+        There are two version of update:
+        1-With Dyn alloc.
+        2-Static alloc.
     **********************************************************************************************************************/
   private:
 
@@ -90,16 +95,16 @@ namespace sec{
     void compress(uint32_t*,uint32_t*);
     void doCalc(uint8_t*,uint64_t );
     void updateDigest(uint32_t*);
-
   public:
     /* Copy Constructor*/
     sha256( const sha256&);
-    void calcDigest(void);
     sha256(void);
     void update(uint8_t *,uint64_t );
     ssize_t getDigest(uint32_t*);
     ssize_t getDigest( char*);
+    void getDigest(std::string&);
     void resetDigest(void);
+    void updateS(uint8_t*,uint64_t );
     /*Destructor*/
     ~sha256();
   };
