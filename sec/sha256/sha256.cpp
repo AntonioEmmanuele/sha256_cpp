@@ -13,22 +13,9 @@ namespace sec{
       sprintf(buff,"%08x",v);
   }
   /*
-    @brief:Utility function used to make one block (bits or bytes)congruent to another.
-    @in : len of the block, dimension to be cogruent
-    @out: Number of bits or bytes to add
-    @ret: value of the positive approximation of the difference
-  */
-  static uint64_t make_congruent(uint64_t len,uint64_t to_be,uint64_t&to_add){
-    double div=(double)len/to_be;
-    double exc=ceil(div);
-    double to_mul=exc-div;
-    to_add = to_be*to_mul;
-    return exc;
-  }
-  /*
     @brief: Utility function used to append one  fill with zeroes and inserting the dimension
-    @in: base ptr to the array we want to modify, original string value len, max dimension(value of the processed )
-          dimension in bits ,dimension.
+    @in: len of the string,dimension of the processed string, dimension in bit of the original string
+    @out: processed string
   */
   static void append_fill_insdim(uint8_t*base_ptr,uint8_t original_value_len,uint8_t max_dim,uint64_t dimension){
     uint8_t index_btm,index=0;
@@ -45,125 +32,30 @@ namespace sec{
         btm_rev--;
     }
   }
-
-/***************************************************
- DYNAMIC FUNCTIONS
- ******************************************/
-#if !SHA256_STATIC
-  /*
-    @brief: Default Constructor
-    @input: string to copy, lenght of the string
-  */
-  sha256::sha256(const uint8_t* const  string,const uint64_t len)
-  {
-    init_originals(string,len);
-    init_digest();
-  }
-  /*
-      @brief: return the lenght of the original string
-      @ret: original_value_len
-  */
-  uint64_t sha256::getOriginalLen(void)
-  {
-    return original_value_len;
-  }
-  /*
-      @brief:obtain the original string
-      @out : pointer to the copyed string
-      @ret : lenght of the string
-      @add info: after using you should delete the string
-  */
-  uint64_t sha256::getOriginal(uint8_t** to_cpy)
-  {
-    if (*to_cpy!=0)
-      delete[]*to_cpy;
-    *to_cpy=new uint8_t[original_value_len];
-    memcpy(*to_cpy,this->original_value,getOriginalLen());
-    return getOriginalLen();
-  }
-  /*
-    @brief:Inits original string and original len
-    @in : string ptr, len ptr
-    @pre: those values shouldn't have been initialized yet
-    @post:original values initialized
-  */
-  void sha256::init_originals(const uint8_t *const string , const uint64_t len)
-  {
-    if(string==NULL||len==0)
-    {
-      perror("Invalid input \n");
-      exit(1);
-    }
-    original_value_len=len;
-    original_value=new uint8_t[original_value_len];
-    memcpy(original_value,string,len);
-  }
-  /*
-      @brief:getFilled and getOriginal allocates an array, this function deletes the allocated array
-      @pre: The array should be previously allocated
-      @in/out: the array prev. allocated (used with getFilled or getOriginal)
-  */
-  void sha256::delArrayUtil(uint8_t**array){
-    delete[]*array;
-    *array=NULL;
-  }
-  /*
-      @brief: All in one function that calculates the digest value.
-      @pre : Filled initialized
-      @post : digest obtained
-  */
-  void sha256::calcDigest(void)
-  {
-    uint8_t *processed_string=nullptr;
-    uint64_t processed_string_len=0;
-    preprocess(processed_string,processed_string_len);
-    doCalc(processed_string,processed_string_len);
-  }
   /*
       @brief: append 1 bit to the array and then make it congruent with 448, append 0 bits making it integer divisible for 512,then add the dimension of the array.
-      @pre: filled_value uninitialized
-      @post:filled value initialized
+      @in: bit len of the original string,original value
+      @out: processed string, processed string len
   */
-  void sha256::preprocess(uint8_t* &filled_value,uint64_t& filled_len)
+  void sha256::preprocess(uint8_t* &to_process,uint64_t& processed_len,uint8_t*original_value,uint64_t bit_dim)
   {
-      uint64_t index=0;
-      uint8_t index_btm=0;
-      uint8_t btm_rev=7;
       /*
-        Should pass the number of bits+ bitlen of the original string (64 bits value)
+        Calculating the bit dimension
       */
-      filled_len=obtain_filled_len((original_value_len*8+1));
-      filled_value = new uint8_t [filled_len];
-      memcpy(filled_value,original_value,original_value_len);
-      append_fill_insdim(filled_value,original_value_len,filled_len,original_value_len*8);
+      /*number of bits +1 */
+      uint32_t to_resize=ceil(((float)(bit_dim)+1)/448);
+      std::cout<<"Factor "<<to_resize<<std::endl<< "Bit dim "<<bit_dim<<std::endl;
+      /* resizing, the result of the operation will be a multiple of 512*/
+      processed_len=to_resize*448+64*to_resize;
+        std::cout<<"To resize in bit "<<processed_len<<std::endl;
+      /* Converting in byte*/
+      processed_len=processed_len/8;
+      std::cout<<"To reside "<<processed_len<<std::endl;
+      to_process = new uint8_t [processed_len];
+      memcpy(to_process,original_value,bit_dim/8);
+      /* Append one, fill with 0(eventually),insert the dimension*/
+      append_fill_insdim(to_process,bit_dim/8,processed_len,bit_dim);
   }
-
-#endif
-
-/********************************************
-COMMON FUNCTIONS
-*******************************************/
-
-/*
-    @brief: This function returns the number of elements of the filled array.
-            In sha256 we need to work with a string of byte composed by a number of bytes that is integer multiple
-            of 512.
-            So we need to append to the original string the value of one and then add  zeroes
-            (in a big endian way) to obtain an integer multiple.
-            To obtain a general case we have:
-              division=len/448.
-              to_mul=ceil of division-to_mul
-              number of byte to add=448*to_mul
-              total bit value= to add+string len(originalvalue+1)+64 bits*exc
-    @in : len -> This is the number of bits of the string(not bytes)
-    @ret: number of bytes of the filled string.
-*/
-uint64_t sha256::obtain_filled_len(uint64_t len)
-{
-  uint64_t to_add=0;
-  uint64_t exc=make_congruent(len,448,to_add);
-  return ((to_add+len+(64*exc))/8);
-}
 /*
     @brief: Resets the digest to its original value (hash_values)
 */
@@ -208,22 +100,12 @@ uint64_t sha256::obtain_filled_len(uint64_t len)
 
   sha256::sha256(const sha256& to_cpy)
   {
-  #if !SHA256_STATIC
-    uint8_t *string=0;
-    uint64_t len=getOriginal(&string);
-    sha256(string,len);
-    /* String is now useless*/
-    delete[]string;
-  #elif SHA256_STATIC
     memcpy(this->digest,to_cpy.digest,sizeof(uint32_t)*sha256_digestuint32_dim);
-  #endif
   }
-
-  sha256::~sha256()
+  /* Destructor*/
+  sha256::~sha256(void)
   {
-#if !SHA256_STATIC
-    delete[]original_value;
-#endif
+
   }
   /*
     @brief:Inits the digest value with the hash values(first 32 bits of the fractional part of the square root of the first 8
@@ -284,6 +166,9 @@ uint64_t sha256::obtain_filled_len(uint64_t len)
        chunk_hash[0]=t1+t2;
      }
   }
+  /*
+    @brief: Updates the digest with a new value*
+  */
   void sha256::updateDigest(uint32_t*chunk_hash){
     uint8_t index=0;
     for(index=0;index<8;index++)
@@ -292,7 +177,6 @@ uint64_t sha256::obtain_filled_len(uint64_t len)
   /*
     @brief: Function that given a processed string updates digest
     @pre: The string in input should be previously processed
-
   */
   void sha256::doCalc(uint8_t*processed_string,uint64_t processed_string_len){
 
@@ -307,7 +191,6 @@ uint64_t sha256::obtain_filled_len(uint64_t len)
        3-update hash value for the chunk
        4-update digest value
     */
-
     for(index=0;index<processed_string_len;index=index+64)
     {
       /*Must initialize it with the current value of digest*/
@@ -317,11 +200,6 @@ uint64_t sha256::obtain_filled_len(uint64_t len)
         updateDigest(chunk_hash);
     }
   }
-  /**********************************
-  STATIC FUNCTIONS
-  ******************************/
-
-#if SHA256_STATIC
   /*
     @brief: constructor for static mode.
     @pre:Block uninitialized
@@ -330,19 +208,25 @@ uint64_t sha256::obtain_filled_len(uint64_t len)
     init_digest();
   }
   /*
-      @brief: Calculating function for the static version.
+      @brief: Calculates the hash.
       @input: string to be calculated, len of string in bytes.
   */
   void sha256::update(uint8_t *to_calc,uint64_t to_calc_len)
   {
-      /*Preprocess*/
-      uint64_t processed_string_len=obtain_filled_len((to_calc_len*8+1));
-      uint8_t processed_string[processed_string_len];
-      memcpy(processed_string,to_calc,to_calc_len);
-      append_fill_insdim(processed_string,to_calc_len,processed_string_len,to_calc_len*8);
-      printf("Len %llu \n",processed_string_len);
-      doCalc(processed_string,processed_string_len);
-
+    uint8_t *processed_string=nullptr;
+    uint64_t processed_string_len=0;
+    preprocess(processed_string,processed_string_len,to_calc,to_calc_len*8);
+    std::cout<<"Processed string"<<processed_string_len<<std::endl;
+    for(uint64_t i=0;i<processed_string_len;i++)
+    {
+      //std::cout<<"  "<<std::hex<<processed_string[i];
+      printf("%x ",processed_string[i]);
+      if(i%8==0&&i!=0)
+        std::cout<<std::endl;
+    }
+    std::cout<<std::endl;
+    doCalc(processed_string,processed_string_len);
+    delete[]processed_string;
+    processed_string=nullptr;
   }
-#endif
 };
