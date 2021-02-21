@@ -43,10 +43,10 @@ namespace sec{
         Calculating the bit dimension
       */
       /*number of bits +1 */
-      uint32_t to_resize=ceil(((float)(bit_dim)+1)/448);
+      uint32_t to_resize=ceil(((float)(bit_dim)+1+64)/512);
       std::cout<<"Factor "<<to_resize<<std::endl<< "Bit dim "<<bit_dim<<std::endl;
       /* resizing, the result of the operation will be a multiple of 512*/
-      processed_len=to_resize*448+64*to_resize;
+      processed_len=to_resize*512;
         std::cout<<"To resize in bit "<<processed_len<<std::endl;
       /* Converting in byte*/
       processed_len=processed_len/8;
