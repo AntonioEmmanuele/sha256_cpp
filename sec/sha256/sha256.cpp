@@ -17,9 +17,9 @@ namespace sec{
     @in: len of the string,dimension of the processed string, dimension in bit of the original string
     @out: processed string
   */
-  static void append_fill_insdim(uint8_t*base_ptr,uint8_t original_value_len,uint8_t max_dim,uint64_t dimension){
-    uint8_t index_btm,index=0;
-    uint8_t btm_rev=7;
+  static void append_fill_insdim(uint8_t*base_ptr,uint64_t original_value_len,uint64_t max_dim,uint64_t dimension){
+    uint64_t index_btm,index=0;
+    uint64_t btm_rev=7;
     base_ptr[original_value_len] = 0b10000000;
     /*Start from the last value and insert all 0*/
     for(  index = original_value_len+1 ; index<  max_dim ; index++)
@@ -30,6 +30,7 @@ namespace sec{
         base_ptr[index]=((dimension)&(0xFF00000000000000>>(8*index_btm)))>>btm_rev*8;
         index_btm++;
         btm_rev--;
+        printf("\nInserted value %x in %llu \n ",base_ptr[index],index);
     }
   }
   /*
