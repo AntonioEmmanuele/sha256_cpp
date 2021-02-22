@@ -240,34 +240,20 @@ namespace sec{
     @post:digest updated
   */
   void sha256::updateS(uint8_t*to_calc,uint64_t to_calc_len)
-{
-    /*Helper string*/
-    uint8_t helper[128];
-    uint64_t helper_len,num_blocks,index=0;
-    /* if it is just one block then process like this , if it is the maximum len will be 128 bytes(128)*/
-    if(to_calc_len<=64)
-    {
-        helper_len=ceil(((float)(to_calc_len*8)+1+64)/512);
-        /*Helper len*512/8*/
-        helper_len=helper_len*64;
-        /*copying*/
-        memcpy(helper,to_calc,to_calc_len);
-        /*Elaborating*/
-        append_fill_insdim(helper,to_calc_len,helper_len,(to_calc_len*8));
-        /*Calculating*/
-        doCalc(helper,helper_len);
-    }
-    /* If it is more than one block or one*/
-    else
-    {
+  {
+      /*Helper string*/
+      uint8_t helper[128];
+      uint64_t helper_len,num_blocks=0;
+
       /*Obtaining the number of blocks*/
       num_blocks=ceil(((float)(to_calc_len*8)+1+64)/512);
       /*Calculate until the last block*/
       doCalc(to_calc,((num_blocks-1)*64));
       /*
-        For the last block then repeat the op of the first
+        For the last block :
         We need to check if the last 512 bit block is congruent with 512.
-        This is basically doing again the case of a block <512 bits.
+        This is basically checking if his dimension in bits+64+1 is congruent with 512, if not use the
+        las 512 bits of helper.
         Resize factors:
         ( ( num_blocks - 1 )*64 (Start point of to calc)-> like to_calc[0] for the previous case
         (( to_calc_len )-( ( num_blocks - 1 )*64)) -> number of bytes in the last block.
@@ -286,6 +272,4 @@ namespace sec{
       /*Calculating*/
       doCalc(helper,helper_len);
     }
-
-}
 };
