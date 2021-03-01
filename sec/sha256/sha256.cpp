@@ -1,3 +1,25 @@
+/****************************************************************************************
+* This file is part of sha256_cpp Project. *
+* *
+* Copyright  © 2021 By Antonio Emmanuele. All rights reserved. *
+* @mail: antony.35.ae@gmail.com *
+* *
+* sha256_cpp is free software: you can redistribute it and/or modify *
+* it under the terms of the GNU General Public License as published by *
+* the Free Software Foundation, either version 3 of the License, or *
+* (at your option) any later version. *
+* *
+* sha256_cpp is distributed in the hope that it will be useful, *
+* but WITHOUT ANY WARRANTY; without even the implied warranty of *
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the *
+* GNU General Public License for more details. *
+* *
+* You should have received a copy of the GNU General Public License *
+* along with The sha256_cpp Project. If not, see <https://www.gnu.org/licenses/>. *
+* *
+* In case of use of this project, I ask you to mention me, to whom it may concern. *
+*****************************************************************************************/
+
 #include "sha256.hpp"
 namespace sec{
   /*
